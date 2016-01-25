@@ -64,24 +64,22 @@ func readCSV(filename string) (c Charts, err error) {
 func Draw(c Charts, width, height int, w io.Writer) (err error) {
 	var angle float64
 	canvas := svg.New(w)
-	r := width * 3 / 10
+	r := width * 3 / 15
 	canvas.Start(width, height)
 	canvas.Circle(width/2, height/2, r, "fill:none;stroke:red")
-	canvas.Line(width/2, height/2, width/2, (height/2)-r, "stroke:red")
 	for _, col := range c {
+		half := float64(360)*c.Percentage(col.Label)/2 + angle
 		angle += float64(360) * c.Percentage(col.Label)
 		radius := angleToRadius(angle)
-		canvas.Line(width/2, height/2, (width/2)-int(math.Acos(radius))*r, (height/2)-int(math.Asin(radius))*r, "stroke:red")
+		canvas.Line(width/2, height/2, (width/2)+(int(math.Sin(radius)*float64(r))), (height/2)-(int(math.Cos(radius)*float64(r))), "stroke:red")
+		canvas.Text((width/2)+(int(math.Sin(angleToRadius(half))*float64(r+50))), (height/2)-(int(math.Cos(angleToRadius(half))*float64(r+50))), col.Label)
 	}
 	canvas.End()
 	return
 }
 
 func angleToRadius(angle float64) (radius float64) {
-	if angle > 180 {
-		angle = (angle - 180) * (-1)
-	}
-	radius = angle * math.Pi / 180
+	radius = math.Pi * angle / 180
 	return
 }
 
