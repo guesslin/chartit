@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"flag"
+	"fmt"
 	"github.com/ajstarks/svgo"
 	"io"
 	"log"
@@ -64,16 +65,32 @@ func readCSV(filename string) (c Charts, err error) {
 func Draw(c Charts, width, height int, w io.Writer) (err error) {
 	var angle float64
 	canvas := svg.New(w)
+	color := []string{"red", "blue", "black", "green"}
 	r := width * 3 / 15
 	canvas.Start(width, height)
 	canvas.Circle(width/2, height/2, r, "fill:none;stroke:red")
-	for _, col := range c {
+	for i, col := range c {
 		half := float64(360)*c.Percentage(col.Label)/2 + angle
+		start := angleToRadius(angle)
 		angle += float64(360) * c.Percentage(col.Label)
-		radius := angleToRadius(angle)
-		canvas.Line(width/2, height/2, (width/2)+(int(math.Sin(radius)*float64(r))), (height/2)-(int(math.Cos(radius)*float64(r))), "stroke:red")
+		end := angleToRadius(angle)
+		canvas.Path(fmt.Sprintf("M%d,%d L%d,%d A%d,%d 0 0,1 %d,%d L%d,%d", (width/2), (height/2), (width/2)+(int(math.Sin(start)*float64(r))), (height/2)-(int(math.Cos(start)*float64(r))), r, r, (width/2)+(int(math.Sin(end)*float64(r))), (height/2)-(int(math.Cos(end)*float64(r))), (width/2), (height/2)),
+			fmt.Sprintf("fill:%s;stroke:%s", color[i%4], color[i%4]))
+		/*
+			canvas.Arc((width/2)+(int(math.Sin(start)*float64(r))), (height/2)-(int(math.Cos(start)*float64(r))), r, r, 0, (end-start) >= 180, true, (width/2)+(int(math.Sin(end)*float64(r))), (height/2)-(int(math.Cos(end)*float64(r))), fmt.Sprintf("fill:%s", color[i%4]))
+			canvas.Line(width/2, height/2, (width/2)+(int(math.Sin(end)*float64(r))), (height/2)-(int(math.Cos(end)*float64(r))), "stroke:red")
+		*/
+		/*
+			canvas.Def()
+			canvas.Line(width/2, height/2, (width/2)+(int(math.Sin(start)*float64(r))), (height/2)-(int(math.Cos(start)*float64(r))), "stroke:red")
+			canvas.Line(width/2, height/2, (width/2)+(int(math.Sin(end)*float64(r))), (height/2)-(int(math.Cos(end)*float64(r))), "stroke:red")
+			canvas.Arc((width/2)+(int(math.Sin(start)*float64(r))), (height/2)-(int(math.Cos(start)*float64(r))), width/2, height/2, r, false, false, (width/2)+(int(math.Sin(end)*float64(r))), (height/2)-(int(math.Cos(end)*float64(r))), fmt.Sprintf("fill:%s", color[i]))
+			canvas.DefEnd()
+		*/
+		fmt.Println("Printing line", i, start, end)
 		canvas.Text((width/2)+(int(math.Sin(angleToRadius(half))*float64(r+50))), (height/2)-(int(math.Cos(angleToRadius(half))*float64(r+50))), col.Label)
 	}
+	fmt.Println(color)
 	canvas.End()
 	return
 }
