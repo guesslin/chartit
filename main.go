@@ -22,7 +22,7 @@ type Chart struct {
 // Charts is slice of Chart
 type Charts []Chart
 
-// Sum of Charts,
+// Sum all element value in Charts
 func (c Charts) Sum() (s int) {
 	for _, col := range c {
 		s += col.Value
@@ -30,7 +30,7 @@ func (c Charts) Sum() (s int) {
 	return
 }
 
-// Percentage of Charts,
+// Percentage return giving label percent in Charts
 func (c Charts) Percentage(label string) float64 {
 	var numerator int
 	for _, col := range c {
@@ -65,19 +65,18 @@ func readCSV(filename string) (c Charts, err error) {
 // DrawPie draws pie chart from data by SVG PATH
 func DrawPie(c Charts, width, height int, w io.Writer) (err error) {
 	var angle float64
-	var large int
 	canvas := svg.New(w)
 	color := []string{"red", "blue", "black", "green"}
 	r := width * 3 / 15
 	canvas.Start(width, height)
 	canvas.Circle(width/2, height/2, r, "fill:none;stroke:red")
 	for i, col := range c {
-		large = 0
+		large := 0
 		half := float64(360)*c.Percentage(col.Label)/2 + angle
-		start := angleToRadius(angle)
+		start := degreeToRadian(angle)
 		angle += float64(360) * c.Percentage(col.Label)
-		end := angleToRadius(angle)
-		if (end - start) >= 180 {
+		end := degreeToRadian(angle)
+		if (end - start) >= math.Pi {
 			large = 1
 		}
 		canvas.Path(fmt.Sprintf("M%d,%d L%d,%d A%d,%d 0 %d,1 %d,%d L%d,%d",
@@ -93,14 +92,15 @@ func DrawPie(c Charts, width, height int, w io.Writer) (err error) {
 			(width/2),   // circle x
 			(height/2)), // circle y
 			fmt.Sprintf("fill:%s;stroke:%s", color[i%4], color[i%4]))
-		canvas.Text((width/2)+(int(math.Sin(angleToRadius(half))*float64(r+50))), (height/2)-(int(math.Cos(angleToRadius(half))*float64(r+50))), col.Label)
+		canvas.Text((width/2)+(int(math.Sin(degreeToRadian(half))*float64(r+50))), (height/2)-(int(math.Cos(degreeToRadian(half))*float64(r+50))), col.Label)
 	}
 	canvas.End()
 	return
 }
 
-func angleToRadius(angle float64) (radius float64) {
-	radius = math.Pi * angle / 180
+// degreeToRadian convert degree into radian
+func degreeToRadian(angle float64) (radian float64) {
+	radian = math.Pi * angle / 180
 	return
 }
 
