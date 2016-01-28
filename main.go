@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -21,6 +22,9 @@ type Chart struct {
 
 // Charts is slice of Chart
 type Charts []Chart
+
+// byValue is alias for sort.Sort
+type byValue Charts
 
 // Sum all element value in Charts
 func (c Charts) Sum() (s int) {
@@ -40,6 +44,17 @@ func (c Charts) Percentage(label string) float64 {
 		}
 	}
 	return float64(numerator) / float64(c.Sum())
+}
+
+func (b byValue) Len() int {
+	return len(b)
+}
+
+func (b byValue) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+func (b byValue) Less(i, j int) bool {
+	return b[i].Value < b[j].Value
 }
 
 // readCSV read from filename input by cmd flag, convert CSV into Charts struct and error if any file operand error happen.
@@ -62,14 +77,18 @@ func readCSV(filename string) (c Charts, err error) {
 	return
 }
 
+func DrawBar(c Charts, width, height int, w io.Writer) {
+}
+
 // DrawPie draws pie chart from data by SVG PATH
-func DrawPie(c Charts, width, height int, w io.Writer) (err error) {
+func DrawPie(c Charts, width, height int, w io.Writer) {
 	var angle float64
-	canvas := svg.New(w)
+	clockwise := 1
 	color := []string{"red", "blue", "black", "green"}
-	r := width * 3 / 15
+	r := int(math.Min(float64(width), float64(height)) * 0.7 / 2)
+	// start Canvas with w io.Writer
+	canvas := svg.New(w)
 	canvas.Start(width, height)
-	canvas.Circle(width/2, height/2, r, "fill:none;stroke:red")
 	for i, col := range c {
 		large := 0
 		half := float64(360)*c.Percentage(col.Label)/2 + angle
@@ -79,7 +98,11 @@ func DrawPie(c Charts, width, height int, w io.Writer) (err error) {
 		if (end - start) >= math.Pi {
 			large = 1
 		}
-		canvas.Path(fmt.Sprintf("M%d,%d L%d,%d A%d,%d 0 %d,1 %d,%d L%d,%d",
+		// Draw Sector from center of circle
+		// then line to start angle point,
+		// then Arc to end angle point with r raidus and clockwise direction
+		// then line back to center of circle
+		canvas.Path(fmt.Sprintf("M%d,%d L%d,%d A%d,%d 0 %d,%d %d,%d L%d,%d",
 			(width/2),  // circle x
 			(height/2), // circle y
 			(width/2)+(int(math.Sin(start)*float64(r))),  // start angle x
@@ -87,15 +110,16 @@ func DrawPie(c Charts, width, height int, w io.Writer) (err error) {
 			r,     // r of circle
 			r,     // r of circle
 			large, // if over than 180 degree
+			clockwise,
 			(width/2)+(int(math.Sin(end)*float64(r))),  // end angle x
 			(height/2)-(int(math.Cos(end)*float64(r))), // end angle y
 			(width/2),   // circle x
 			(height/2)), // circle y
 			fmt.Sprintf("fill:%s;stroke:%s", color[i%4], color[i%4]))
-		canvas.Text((width/2)+(int(math.Sin(degreeToRadian(half))*float64(r+50))), (height/2)-(int(math.Cos(degreeToRadian(half))*float64(r+50))), col.Label)
+
+		canvas.Text((width/2)+(int(math.Sin(degreeToRadian(half))*float64(r)*1.2)), (height/2)-(int(math.Cos(degreeToRadian(half))*float64(r)*1.2)), col.Label)
 	}
 	canvas.End()
-	return
 }
 
 // degreeToRadian convert degree into radian
@@ -108,20 +132,33 @@ func main() {
 	var csvFile string
 	var chartFile string
 	var width, height int
+	var pie, bar bool
 	flag.StringVar(&csvFile, "csv", "input.csv", "CSV filename")
-	flag.StringVar(&chartFile, "output", "output.svg", "OUTPUT filename")
+	flag.StringVar(&chartFile, "output", "output", "OUTPUT filename without file extend")
 	flag.IntVar(&width, "width", 1000, "OUTPUT file width")
 	flag.IntVar(&height, "height", 800, "OUTPUT file height")
+	flag.BoolVar(&pie, "pie", false, "Generate Pie Chart or not")
+	flag.BoolVar(&bar, "bar", false, "Generate Bar Chart or not")
 	flag.Parse()
 	c, err := readCSV(csvFile)
 	if err != nil {
 		log.Fatal("Read csv file with some problem!")
 	}
-	out, err := os.Create(chartFile)
-	if err != nil {
-		log.Fatal("Create file with some problem!")
+	sort.Sort(sort.Reverse(byValue(c)))
+	if pie {
+		out, err := os.Create(fmt.Sprintf("%s-pie.csv", chartFile))
+		if err != nil {
+			log.Fatal("Create file with some problem!")
+		}
+		defer out.Close()
+		DrawPie(c, width, height, out)
 	}
-	if err = DrawPie(c, width, height, out); err != nil {
-		log.Fatal("Write canvas file with some problem!")
+	if bar {
+		out, err := os.Create(fmt.Sprintf("%s-bar.csv", chartFile))
+		if err != nil {
+			log.Fatal("Create file with some problem!")
+		}
+		defer out.Close()
+		DrawBar(c, width, height, out)
 	}
 }
