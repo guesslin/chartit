@@ -20,7 +20,7 @@ Usage
 Samples
 =======
 
-![PieChart1](./samples/output.svg)
+![PieChart1](https://rawgit.com/guesslin/chartit/master/samples/output.svg)
 
 TODO
 ====
