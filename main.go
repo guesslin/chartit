@@ -27,8 +27,8 @@ type Charts []Chart
 type byValue Charts
 
 // Sum all element value in Charts
-func (c Charts) Sum() (s int) {
-	for _, col := range c {
+func (c *Charts) Sum() (s int) {
+	for _, col := range *c {
 		s += col.Value
 	}
 	return
@@ -146,7 +146,7 @@ func main() {
 	}
 	sort.Sort(sort.Reverse(byValue(c)))
 	if pie {
-		out, err := os.Create(fmt.Sprintf("%s-pie.csv", chartFile))
+		out, err := os.Create(fmt.Sprintf("%s-pie.svg", chartFile))
 		if err != nil {
 			log.Fatal("Create file with some problem!")
 		}
@@ -154,7 +154,7 @@ func main() {
 		DrawPie(c, width, height, out)
 	}
 	if bar {
-		out, err := os.Create(fmt.Sprintf("%s-bar.csv", chartFile))
+		out, err := os.Create(fmt.Sprintf("%s-bar.svg", chartFile))
 		if err != nil {
 			log.Fatal("Create file with some problem!")
 		}
